@@ -4,7 +4,7 @@ import Browser
 import Http
 import HttpError exposing (errorToString)
 import Html exposing (Html, button, div, input, p, text)
-import Html.Attributes exposing (placeholder, type_, value)
+import Html.Attributes exposing (placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -75,7 +75,13 @@ view model =
     , viewInput "text" "Email" model.eEmail EEmail
     , viewInput "number" "Phone number" model.ePhone EPhone
     , button[ onClick (AddEmployee (FormEmployee model.eName model.eEmail (String.toInt model.ePhone)))][text "Submit"]
+    , p [] [text (showEmployee model.returnedEm)]
+    , p [style "color" "red"] [text model.failure]
     ]
+
+viewInput : String -> String -> String -> (String -> AddEMessage) -> Html AddEMessage
+viewInput t p v toMsg =
+  input [ type_ t, placeholder p, value v, onInput toMsg ] []
 
 addEmployee : FormEmployee -> Cmd AddEMessage
 addEmployee employee = Http.post
@@ -90,9 +96,14 @@ validatePhone phone =
         Just pNumber -> pNumber
         Nothing -> 0
 
-viewInput : String -> String -> String -> (String -> AddEMessage) -> Html AddEMessage
-viewInput t p v toMsg =
-  input [ type_ t, placeholder p, value v, onInput toMsg ] []
+showEmployee : Employee -> String
+showEmployee employee =
+    if employee.name /= "" then
+    "Name: " ++ employee.name ++
+    ", Email: " ++ employee.email ++
+    ", Phone: " ++ String.fromInt employee.phone
+    else
+    ""
 
 decodeEmployee: Decode.Decoder Employee
 decodeEmployee =
