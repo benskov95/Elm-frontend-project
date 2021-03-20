@@ -107,8 +107,6 @@ getEmployees = Http.get
     , expect = Http.expectJson EmployeeResult allEmployeesDecoder
     }
 
-
-
 subscriptions : Model -> Sub Message
 subscriptions _ =
     Sub.none
