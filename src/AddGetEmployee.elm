@@ -1,9 +1,9 @@
-module AddEmployee exposing (..)
+module AddGetEmployee exposing (..)
 
 import Browser
 import Http
 import HttpError exposing (errorToString)
-import Html exposing (Html, button, div, input, p, text)
+import Html exposing (Html, br, button, div, h1, input, p, text)
 import Html.Attributes exposing (placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
@@ -29,27 +29,33 @@ type alias FormEmployee =
     , phone: Maybe Int
     }
 
-type alias FModel =
-    { eName: String
+type alias EmpFormModel =
+    { eId: String
+    , eName: String
     , eEmail: String
     , ePhone: String
     , returnedEm: Employee
     , failure: String
     }
 
-type AddEMessage
-        = EName String
+type EmpFormMessage
+        = EId String
+        | EName String
         | EEmail String
         | EPhone String
         | AddEmployee FormEmployee
+        | GetEmployee String
         | ReturnedEm (Result Http.Error Employee)
 
-init : () -> (FModel, Cmd AddEMessage)
-init _ = (FModel "" "" "" (Employee 0 "" "" 0) "", Cmd.none)
+init : () -> (EmpFormModel, Cmd EmpFormMessage)
+init _ = (EmpFormModel "" "" "" "" (Employee 0 "" "" 0) "", Cmd.none)
 
-update : AddEMessage -> FModel -> (FModel, Cmd AddEMessage)
+update : EmpFormMessage -> EmpFormModel -> (EmpFormModel, Cmd EmpFormMessage)
 update message model =
     case message of
+        EId id ->
+            ({model | eId = id}, Cmd.none)
+
         EName name ->
             ({model | eName = name}, Cmd.none)
 
@@ -60,7 +66,10 @@ update message model =
             ({model | ePhone = phone}, Cmd.none)
 
         AddEmployee employee ->
-            (model, addEmployee employee)
+            ({model | failure = ""}, addEmployee employee)
+
+        GetEmployee id ->
+            ({model | failure = ""}, getEmployee id)
 
         ReturnedEm result ->
             case result of
@@ -68,26 +77,40 @@ update message model =
                 Err error -> ({model | failure = errorToString error}, Cmd.none)
 
 
-view : FModel -> Html AddEMessage
+view : EmpFormModel -> Html EmpFormMessage
 view model =
-    div []
-    [ viewInput "text" "Name" model.eName EName
+    div [style "text-align" "center", style "margin-top" "200px"]
+    [ h1 [] [text "Add employee"]
+    , viewInput "text" "Name" model.eName EName
     , viewInput "text" "Email" model.eEmail EEmail
     , viewInput "number" "Phone number" model.ePhone EPhone
-    , button[ onClick (AddEmployee (FormEmployee model.eName model.eEmail (String.toInt model.ePhone)))][text "Submit"]
-    , p [] [text (showEmployee model.returnedEm)]
+    , button[ onClick (AddEmployee
+        (FormEmployee model.eName model.eEmail (String.toInt model.ePhone)))][text "Add"]
+
+    , h1 [] [text "Get employee by ID"]
+    , viewInput "number" "Id" model.eId EId
+    , br [] []
+    , button [onClick (GetEmployee model.eId)] [text "Search"]
+    , showEmployee model.returnedEm
     , p [style "color" "red"] [text model.failure]
     ]
 
-viewInput : String -> String -> String -> (String -> AddEMessage) -> Html AddEMessage
+viewInput : String -> String -> String -> (String -> EmpFormMessage) -> Html EmpFormMessage
 viewInput t p v toMsg =
   input [ type_ t, placeholder p, value v, onInput toMsg ] []
 
-addEmployee : FormEmployee -> Cmd AddEMessage
+addEmployee : FormEmployee -> Cmd EmpFormMessage
 addEmployee employee = Http.post
     { url = "http://localhost:8080/startcode-ca3/api/employees"
-    , body = Http.jsonBody (encodeEmployee (Employee 0 employee.name employee.email (validatePhone employee.phone)))
-    , expect = Http.expectJson ReturnedEm decodeEmployee
+    , body = Http.jsonBody
+        (employeeEncoder (Employee 0 employee.name employee.email (validatePhone employee.phone)))
+    , expect = Http.expectJson ReturnedEm employeeDecoder
+    }
+
+getEmployee : String -> Cmd EmpFormMessage
+getEmployee id = Http.get
+    { url = "http://localhost:8080/startcode-ca3/api/employees/" ++ id
+    , expect = Http.expectJson ReturnedEm employeeDecoder
     }
 
 validatePhone : Maybe Int -> Int
@@ -96,29 +119,35 @@ validatePhone phone =
         Just pNumber -> pNumber
         Nothing -> 0
 
-showEmployee : Employee -> String
+showEmployee : Employee -> Html EmpFormMessage
 showEmployee employee =
     if employee.name /= "" then
-    "Name: " ++ employee.name ++
-    ", Email: " ++ employee.email ++
-    ", Phone: " ++ String.fromInt employee.phone
+    p []
+    [ text ("ID: " ++ (String.fromInt employee.id))
+    , br [] []
+    , text ("Name: " ++ employee.name)
+    , br [] []
+    , text ("Email: " ++ employee.email)
+    , br [] []
+    , text ("Phone: " ++ String.fromInt employee.phone)
+    ]
     else
-    ""
+    p [] [text ""]
 
-decodeEmployee: Decode.Decoder Employee
-decodeEmployee =
+employeeDecoder: Decode.Decoder Employee
+employeeDecoder =
        Decode.map4 Employee
        (Decode.field "id" Decode.int)
        (Decode.field "name" Decode.string)
        (Decode.field "email" Decode.string)
        (Decode.field "phone" Decode.int)
 
-encodeEmployee : Employee -> Encode.Value
-encodeEmployee employee=
+employeeEncoder : Employee -> Encode.Value
+employeeEncoder employee =
     Encode.object
         [("name", Encode.string employee.name)
         ,("email", Encode.string employee.email)
         ,("phone", Encode.int employee.phone)]
 
-subscriptions : FModel -> Sub AddEMessage
+subscriptions : EmpFormModel -> Sub EmpFormMessage
 subscriptions _ = Sub.none
