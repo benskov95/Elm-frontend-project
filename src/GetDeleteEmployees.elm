@@ -1,7 +1,7 @@
-module GetEmployees exposing (..)
+module GetDeleteEmployees exposing (..)
 
 import Browser
-import Html exposing (Attribute, Html, button, div, table, tbody, td, text, th, thead, tr)
+import Html exposing (Attribute, Html, button, div, h1, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
 import Http
@@ -18,24 +18,33 @@ main =
 
 -- MODEL--
 
-init : () -> ( Model, Cmd Message)
+type alias Employee =
+    { id  : Int
+    , name: String
+    , email: String
+    , phone: Int
+    }
+
+type EmpListModel
+    = Failure String
+    | Waiting
+    | Loading
+    | Continue
+    | Success (List Employee)
+
+
+type EmpListMessage
+    = TryAgainPlease
+    | EmployeeResult (Result Http.Error (List Employee))
+    | DeleteEmployee Int
+    | DeleteResult (Result Http.Error Employee)
+
+init : () -> ( EmpListModel, Cmd EmpListMessage)
 init _ =
     ( Waiting, Cmd.none )
 
 
-type Model
-    = Failure String
-    | Waiting
-    | Loading
-    | Success (List Employee)
-
-
-type Message
-    = TryAgainPlease
-    | EmployeeResult (Result Http.Error (List Employee))
-
-
-update : Message -> Model -> ( Model, Cmd Message )
+update : EmpListMessage -> EmpListModel -> ( EmpListModel, Cmd EmpListMessage )
 update message model =
     case message of
         TryAgainPlease ->
@@ -49,15 +58,28 @@ update message model =
                 Err error ->
                     (Failure (errorToString error), Cmd.none)
 
+        DeleteEmployee id ->
+            (Loading, deleteEmployee id)
+
+        DeleteResult result ->
+            case result of
+                Ok _ ->
+                    (Continue, getEmployees)
+                Err error ->
+                    (Failure (errorToString error), Cmd.none)
+
 
 
 -- VIEW
 
-view : Model -> Html Message
+view : EmpListModel -> Html EmpListMessage
 view model =
     case model of
         Waiting ->
+            div [ style "text-align" "center", style "margin-top" "200px"]
+            [
             button [ onClick TryAgainPlease ] [ text "Reload" ]
+            ]
 
         Failure msg ->
             text ("Something went wrong " ++ msg)
@@ -66,20 +88,29 @@ view model =
             text "Please wait ...."
 
         Success employees ->
-            div [ style "text-align" "center" ]
-                [ table tableStyle
+            div [ style "text-align" "center"
+                , style "margin-top" "100px"
+                , style "margin-left" "500px"
+                , style "margin-right" "500px"
+                ]
+                [ h1 [] [text "Employees"]
+                , table tableStyle
                     [ thead []
                         [ tr trStyle
                             [ th trStyle [ text "ID" ]
                             , th trStyle [ text "Name" ]
                             , th trStyle [ text "Email" ]
                             , th trStyle [ text "Phone" ]
+                            , th trStyle [ text "" ]
                             ]
                         ]
                     , tbody [] (List.map viewEmployee employees)
                     ]
                 , button [onClick TryAgainPlease] [text "Reload"]
                 ]
+
+        Continue ->
+            text ""
 
 tableStyle : List (Attribute msg)
 tableStyle =
@@ -92,33 +123,33 @@ trStyle =
     [style "border" "1px solid black"]
 
 
-viewEmployee : Employee -> Html Message
+viewEmployee : Employee -> Html EmpListMessage
 viewEmployee employee =
     tr trStyle
         [ td trStyle [ text <| String.fromInt employee.id ]
         , td trStyle [ text employee.name ]
         , td trStyle [ text employee.email ]
         , td trStyle [ text <| String.fromInt employee.phone ]
+        , td trStyle [button [onClick (DeleteEmployee employee.id)] [text "Delete"]]
         ]
 
-getEmployees : Cmd Message
+getEmployees : Cmd EmpListMessage
 getEmployees = Http.get
-    { url = "http://localhost:8080/startcode_ca3/api/employees"
+    { url = "http://localhost:8080/startcode-ca3/api/employees"
     , expect = Http.expectJson EmployeeResult allEmployeesDecoder
     }
 
-subscriptions : Model -> Sub Message
-subscriptions _ =
-    Sub.none
-
-type alias Employee =
-    {
-     id  : Int
-    ,name: String
-    ,email: String
-    ,phone: Int
+deleteEmployee : Int -> Cmd EmpListMessage
+deleteEmployee id =
+    Http.request
+    { method = "DELETE"
+    , headers = []
+    , url = "http://localhost:8080/startcode-ca3/api/employees/" ++ String.fromInt id
+    , body = Http.emptyBody
+    , expect = Http.expectJson DeleteResult employeeDecoder
+    , timeout = Nothing
+    , tracker = Nothing
     }
-
 
 employeeDecoder: Decode.Decoder Employee
 employeeDecoder =
@@ -128,7 +159,10 @@ employeeDecoder =
        (Decode.field "email" Decode.string)
        (Decode.field "phone" Decode.int)
 
-
 allEmployeesDecoder: Decode.Decoder (List Employee)
 allEmployeesDecoder =
     Decode.list employeeDecoder
+
+subscriptions : EmpListModel -> Sub EmpListMessage
+subscriptions _ =
+    Sub.none
