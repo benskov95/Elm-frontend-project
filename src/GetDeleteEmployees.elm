@@ -175,9 +175,9 @@ view model =
                 , style "margin-left" "500px"
                 , style "margin-right" "500px"
                 ]
-                [ input [ type_ "text", placeholder emp.name, onInput EditEmpName, value emp.name ] []
-                , input [ type_ "text", placeholder <| String.fromInt emp.phone, onInput phoneInput, value <| String.fromInt emp.phone ] []
-                , input [ type_ "text", placeholder emp.email, onInput EditEmpEmail, value emp.email ] []
+                [ input [ type_ "text", onInput EditEmpName, value emp.name ] []
+                , input [ type_ "text", onInput phoneInput, value <| String.fromInt emp.phone ] []
+                , input [ type_ "text", onInput EditEmpEmail, value emp.email ] []
                 , button [ onClick (EditSave emp) ] [ text "Save changes" ]
                 , br [] []
                 , button [style "margin-top" "20px", onClick TryAgainPlease] [text "Back to table"]
