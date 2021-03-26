@@ -1,7 +1,7 @@
 module GetDeleteEmployees exposing (..)
 
 import Browser
-import Html exposing (Attribute, Html, button, div, h1, input, table, tbody, td, text, th, thead, tr)
+import Html exposing (Attribute, Html, br, button, div, h1, input, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
@@ -171,14 +171,16 @@ view model =
         Edit emp ->
             div
                 [ style "text-align" "center"
-                , style "margin-top" "100px"
+                , style "margin-top" "200px"
                 , style "margin-left" "500px"
                 , style "margin-right" "500px"
                 ]
                 [ input [ type_ "text", placeholder emp.name, onInput EditEmpName, value emp.name ] []
                 , input [ type_ "text", placeholder <| String.fromInt emp.phone, onInput phoneInput, value <| String.fromInt emp.phone ] []
                 , input [ type_ "text", placeholder emp.email, onInput EditEmpEmail, value emp.email ] []
-                , button [ onClick (EditSave emp) ] [ text "save changes" ]
+                , button [ onClick (EditSave emp) ] [ text "Save changes" ]
+                , br [] []
+                , button [style "margin-top" "20px", onClick TryAgainPlease] [text "Back to table"]
                 ]
 
 
@@ -202,8 +204,9 @@ viewEmployee employee =
         , td trStyle [ text employee.name ]
         , td trStyle [ text employee.email ]
         , td trStyle [ text <| String.fromInt employee.phone ]
-        , td trStyle [ button [ onClick (DeleteEmployee employee.id) ] [ text "Delete" ]
-        , td trStyle [ button [ onClick (EditEmployee employee) ] [ text "Edit" ]]]]
+        , td trStyle [ button [ onClick (DeleteEmployee employee.id) ] [ text "Delete" ]]
+        , td trStyle [ button [ onClick (EditEmployee employee) ] [ text "Edit" ]]
+        ]
 
 
 
