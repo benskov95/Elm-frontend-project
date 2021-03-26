@@ -76,6 +76,7 @@ update message model =
 view : CusListModel -> Html CusListMessage
 view model =
     case model of
+
         Waiting ->
             div [ style "text-align" "center", style "margin-top" "200px"]
             [
