@@ -1,8 +1,8 @@
 module GetDeleteEmployees exposing (..)
 
 import Browser
-import Html exposing (Attribute, Html, br, button, div, h1, input, table, tbody, td, text, th, thead, tr)
-import Html.Attributes exposing (placeholder, style, type_, value)
+import Html exposing (Attribute, Html, br, button, div, h1, input, p, table, tbody, td, text, th, thead, tr)
+import Html.Attributes exposing (disabled, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import HttpError exposing (errorToString)
@@ -18,10 +18,7 @@ main =
         , subscriptions = subscriptions
         }
 
-
-
 -- MODEL--
-
 
 type alias Employee =
     { id : Int
@@ -30,15 +27,19 @@ type alias Employee =
     , phone : Int
     }
 
+type alias FormEmployee =
+    { id : Int
+    , name : String
+    , email : String
+    , phone : String
+    }
 
 type EmpListModel
     = Failure String
     | Waiting
     | Loading
     | Success (List Employee)
-    | Edit Employee
-
-
+    | Edit FormEmployee
 
 type EmpListMessage
     = TryAgainPlease
@@ -47,12 +48,11 @@ type EmpListMessage
     | DeleteResult (Result Http.Error Employee)
     | EditEmpName String
     | EditEmpEmail String
-    | EditEmpPhone Int
+    | EditEmpPhone String
     | EditEmployee Employee
     | EditSave Employee
     | EditEmployeeResult (Result Http.Error Employee)
     | IncorrectInput String
-
 
 init : () -> ( EmpListModel, Cmd EmpListMessage )
 init _ =
@@ -85,7 +85,7 @@ update message model =
                     ( Failure (errorToString error), Cmd.none )
 
         EditEmployee emp ->
-            ( Edit emp, Cmd.none )
+            ( Edit (FormEmployee emp.id emp.name emp.email (String.fromInt emp.phone)), Cmd.none )
 
         EditEmpName name ->
             case model of
@@ -112,11 +112,11 @@ update message model =
                     ( model, Cmd.none )
 
         EditSave emp ->
-            ( Edit emp, editEmployee emp )
+            ( Edit (FormEmployee emp.id emp.name emp.email (String.fromInt emp.phone)) , editEmployee emp )
 
         EditEmployeeResult result ->
             case result of
-                Ok emp ->
+                Ok _ ->
                     ( Loading, getEmployees )
 
                 Err error ->
@@ -125,10 +125,7 @@ update message model =
         IncorrectInput msg ->
             ( Failure msg, Cmd.none )
 
-
-
 -- VIEW
-
 
 view : EmpListModel -> Html EmpListMessage
 view model =
@@ -176,11 +173,11 @@ view model =
                 , style "margin-right" "500px"
                 ]
                 [ input [ type_ "text", onInput EditEmpName, value emp.name ] []
-                , input [ type_ "text", onInput phoneInput, value <| String.fromInt emp.phone ] []
+                , input [ type_ "text", onInput EditEmpPhone, value emp.phone ] []
                 , input [ type_ "text", onInput EditEmpEmail, value emp.email ] []
-                , button [ onClick (EditSave emp) ] [ text "Save changes" ]
+                , phoneInput emp
                 , br [] []
-                , button [style "margin-top" "20px", onClick TryAgainPlease] [text "Back to table"]
+                , button [onClick TryAgainPlease] [text "Back to table"]
                 ]
 
 
@@ -208,18 +205,12 @@ viewEmployee employee =
         , td trStyle [ button [ onClick (EditEmployee employee) ] [ text "Edit" ]]
         ]
 
-
-
-
-
-
 getEmployees : Cmd EmpListMessage
 getEmployees =
     Http.get
         { url = "http://localhost:8080/startcode-ca3/api/employees"
         , expect = Http.expectJson EmployeeResult allEmployeesDecoder
         }
-
 
 deleteEmployee : Int -> Cmd EmpListMessage
 deleteEmployee id =
@@ -233,6 +224,17 @@ deleteEmployee id =
         , tracker = Nothing
         }
 
+editEmployee : Employee -> Cmd EmpListMessage
+editEmployee emp =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = "http://localhost:8080/startcode-ca3/api/employees"
+        , body = Http.jsonBody (employeeEncoder emp)
+        , expect = Http.expectJson EditEmployeeResult employeeDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
 employeeDecoder : Decode.Decoder Employee
 employeeDecoder =
@@ -241,7 +243,6 @@ employeeDecoder =
         (Decode.field "name" Decode.string)
         (Decode.field "email" Decode.string)
         (Decode.field "phone" Decode.int)
-
 
 employeeEncoder : Employee -> Encode.Value
 employeeEncoder employee =
@@ -252,34 +253,24 @@ employeeEncoder employee =
         , ( "phone", Encode.int employee.phone )
         ]
 
-
 allEmployeesDecoder : Decode.Decoder (List Employee)
 allEmployeesDecoder =
     Decode.list employeeDecoder
 
 
-editEmployee : Employee -> Cmd EmpListMessage
-editEmployee emp =
-    Http.request
-        { method = "PUT"
-        , headers = []
-        , url = "http://localhost:8080/startcode-ca3/api/employees/"
-        , body = Http.jsonBody (employeeEncoder emp)
-        , expect = Http.expectJson EditEmployeeResult employeeDecoder
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-phoneInput : String -> EmpListMessage
-phoneInput input =
-    case String.toInt input of
-        Just int ->
-            EditEmpPhone int
-
+phoneInput : FormEmployee -> Html EmpListMessage
+phoneInput emp =
+    case String.toInt emp.phone of
+        Just phoneNumber ->
+            div []
+            [ button [ onClick (EditSave (Employee emp.id emp.name emp.email phoneNumber)) ] [ text "Save changes" ]
+            , p [] [text ""]
+            ]
         Nothing ->
-            IncorrectInput "Incorrect phone number"
-
+            div []
+            [ button [disabled True] [ text "Save changes" ]
+            , p [style "color" "red"] [text "Phone number must consist of numbers only."]
+            ]
 
 subscriptions : EmpListModel -> Sub EmpListMessage
 subscriptions _ =
