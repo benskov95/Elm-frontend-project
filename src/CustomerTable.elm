@@ -1,13 +1,11 @@
-module GetDeleteCustomersAddGetTasks exposing (..)
+module CustomerTable exposing (..)
 
 import Browser
-import GetDeleteEditEmployees exposing (Employee, employeeListDecoder)
+import Utils exposing (Customer, Employee, FormTask, Task, customerDecoder, customerListDecoder, tableStyle, taskDecoder, taskEncoder, taskListDecoder, trStyle)
 import Html exposing (Attribute, Html, br, button, div, h1, input, p, strong, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (disabled, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Json.Decode as Decode
-import Json.Encode as Encode
 
 main =
     Browser.element
@@ -18,31 +16,6 @@ main =
         }
 
 -- MODEL--
-
-type alias Customer =
-    { id: Int
-    , name: String
-    , address: String
-    , email: String
-    , phone: Int
-    }
-
-type alias Task =
-    { id: Int
-    , title : String
-    , date: String
-    , description: String
-    , employeeList: List Employee
-    , customer: Customer
-    }
-
-type alias FormTask =
-    { title: String
-    , date: String
-    , description: String
-    , employeeIds: String
-    , customerId: Int
-    }
 
 type CusListModel
     = Waiting String
@@ -244,16 +217,6 @@ view model =
             , button [style "margin-top" "20px", onClick (GetCustomerTasks task.customerId)] [text "Back to customer tasks"]
             ]
 
-tableStyle : List (Attribute msg)
-tableStyle =
-    [ style "border-collapse" "collapse"
-    , style "width" "100%"
-    , style  "border" "1px solid black"
-    ]
-trStyle : List (Attribute msg)
-trStyle =
-    [style "border" "1px solid black"]
-
 viewInput : String -> String -> String -> (String -> CusListMessage) -> Html CusListMessage
 viewInput t p v toMsg =
   input [ type_ t, placeholder p, value v, onInput toMsg ] []
@@ -385,48 +348,6 @@ checkEmpIds employees =
                 False
             else
                 checkEmpIds rest
-
-customerDecoder : Decode.Decoder Customer
-customerDecoder =
-       Decode.map5 Customer
-       (Decode.field "id" Decode.int)
-       (Decode.field "name" Decode.string)
-       (Decode.field "address" Decode.string)
-       (Decode.field "email" Decode.string)
-       (Decode.field "phone" Decode.int)
-
-taskEncoder : Task -> Encode.Value
-taskEncoder task =
-    Encode.object
-    [("title", Encode.string task.title)
-    ,("date", Encode.string task.date)
-    ,("description", Encode.string task.description)
-    ,("employeeList", Encode.list empOnlyIdEncoder task.employeeList)
-    ,("customer", Encode.object[("id", Encode.int task.customer.id)])
-    ]
-
-empOnlyIdEncoder : Employee -> Encode.Value
-empOnlyIdEncoder emp =
-    Encode.object
-    [("id", Encode.int emp.id)]
-
-taskDecoder : Decode.Decoder Task
-taskDecoder =
-    Decode.map6 Task
-    (Decode.field "id" Decode.int)
-    (Decode.field "title" Decode.string)
-    (Decode.field "date" Decode.string)
-    (Decode.field "description" Decode.string)
-    (Decode.field "employeeList" employeeListDecoder)
-    (Decode.field "customer" customerDecoder)
-
-customerListDecoder : Decode.Decoder (List Customer)
-customerListDecoder =
-    Decode.list customerDecoder
-
-taskListDecoder : Decode.Decoder (List Task)
-taskListDecoder =
-    Decode.list taskDecoder
 
 subscriptions : CusListModel -> Sub CusListMessage
 subscriptions _ =

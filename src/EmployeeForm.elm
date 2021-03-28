@@ -1,32 +1,18 @@
-module AddGetEmployee exposing (..)
+module EmployeeForm exposing (..)
 
 import Browser
+import Utils exposing (Employee, FormEmployee, employeeDecoder, employeeEncoder)
 import Http
 import HttpError exposing (errorToString)
 import Html exposing (Html, br, button, div, h1, input, p, text)
 import Html.Attributes exposing (disabled, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Json.Decode as Decode
-import Json.Encode as Encode
 
 main = Browser.element
     { init = init
     , update = update
     , view = view
     , subscriptions = subscriptions
-    }
-
-type alias Employee =
-    { id: Int
-    , name: String
-    , email: String
-    , phone: Int
-    }
-
-type alias FormEmployee =
-    { name: String
-    , email: String
-    , phone: String
     }
 
 type alias EmpFormModel =
@@ -84,7 +70,7 @@ view model =
     , viewInput "text" "Name" model.eName EName
     , viewInput "text" "Email" model.eEmail EEmail
     , viewInput "text" "Phone number" model.ePhone EPhone
-    , validateInput (FormEmployee model.eName model.eEmail model.ePhone)
+    , validateInput (FormEmployee 0 model.eName model.eEmail model.ePhone)
 
     , h1 [] [text "Get employee by ID"]
     , viewInput "number" "Id" model.eId EId
@@ -146,21 +132,6 @@ showEmployee employee =
     ]
     else
     p [] [text ""]
-
-employeeDecoder: Decode.Decoder Employee
-employeeDecoder =
-       Decode.map4 Employee
-       (Decode.field "id" Decode.int)
-       (Decode.field "name" Decode.string)
-       (Decode.field "email" Decode.string)
-       (Decode.field "phone" Decode.int)
-
-employeeEncoder : Employee -> Encode.Value
-employeeEncoder employee =
-    Encode.object
-        [("name", Encode.string employee.name)
-        ,("email", Encode.string employee.email)
-        ,("phone", Encode.int employee.phone)]
 
 subscriptions : EmpFormModel -> Sub EmpFormMessage
 subscriptions _ = Sub.none

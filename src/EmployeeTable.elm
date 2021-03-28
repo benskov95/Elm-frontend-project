@@ -1,13 +1,12 @@
-module GetDeleteEditEmployees exposing (..)
+module EmployeeTable exposing (..)
 
 import Browser
+import Utils exposing (Employee, FormEmployee, employeeDecoder, employeeEncoder, employeeListDecoder, tableStyle, trStyle)
 import Html exposing (Attribute, Html, br, button, div, h1, input, p, table, tbody, td, text, th, thead, tr)
-import Html.Attributes exposing (disabled, placeholder, style, type_, value)
+import Html.Attributes exposing (disabled, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import HttpError exposing (errorToString)
-import Json.Decode as Decode
-import Json.Encode as Encode
 
 
 main =
@@ -19,20 +18,6 @@ main =
         }
 
 -- MODEL--
-
-type alias Employee =
-    { id : Int
-    , name : String
-    , email : String
-    , phone : Int
-    }
-
-type alias FormEmployee =
-    { id : Int
-    , name : String
-    , email : String
-    , phone : String
-    }
 
 type EmpListModel
     = Waiting String
@@ -167,20 +152,6 @@ view model =
                 , button [onClick TryAgain] [text "Back to table"]
                 ]
 
-
-tableStyle : List (Attribute msg)
-tableStyle =
-    [ style "border-collapse" "collapse"
-    , style "width" "100%"
-    , style "border" "1px solid black"
-    ]
-
-
-trStyle : List (Attribute msg)
-trStyle =
-    [ style "border" "1px solid black" ]
-
-
 viewEmployee : Employee -> Html EmpListMessage
 viewEmployee employee =
     tr trStyle
@@ -222,27 +193,6 @@ editEmployee emp =
         , timeout = Nothing
         , tracker = Nothing
         }
-
-employeeDecoder : Decode.Decoder Employee
-employeeDecoder =
-    Decode.map4 Employee
-        (Decode.field "id" Decode.int)
-        (Decode.field "name" Decode.string)
-        (Decode.field "email" Decode.string)
-        (Decode.field "phone" Decode.int)
-
-employeeEncoder : Employee -> Encode.Value
-employeeEncoder employee =
-    Encode.object
-        [ ( "id", Encode.int employee.id )
-        , ( "name", Encode.string employee.name )
-        , ( "email", Encode.string employee.email )
-        , ( "phone", Encode.int employee.phone )
-        ]
-
-employeeListDecoder : Decode.Decoder (List Employee)
-employeeListDecoder =
-    Decode.list employeeDecoder
 
 
 validateInput : FormEmployee -> Html EmpListMessage
