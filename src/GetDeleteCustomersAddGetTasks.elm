@@ -83,7 +83,7 @@ update message model =
                 Ok employees ->
                     ( CusSuccess employees, Cmd.none )
                 Err _ ->
-                    (Waiting "Something went wrong. Please reload.", Cmd.none)
+                    (Waiting "Could not load customers. Please reload.", Cmd.none)
 
         DeleteCustomer id ->
             (Loading, deleteCustomer id)
@@ -93,7 +93,7 @@ update message model =
                 Ok _ ->
                     (Loading, getCustomers)
                 Err _->
-                    (Waiting "Something went wrong. Please reload.", Cmd.none)
+                    (Waiting "Could not delete. Please reload.", Cmd.none)
 
         GetCustomerTasks id ->
             (Loading, getCustomerTasks id)
@@ -151,7 +151,7 @@ update message model =
                 Ok task ->
                     (Loading, getCustomerTasks task.customer.id)
                 Err _ ->
-                    (Waiting "Something went wrong.", Cmd.none)
+                    (Waiting "Could not add task. Please reload", Cmd.none)
 
 
 -- VIEW
