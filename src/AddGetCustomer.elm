@@ -4,7 +4,7 @@ import Browser
 import Http
 import HttpError exposing (errorToString)
 import Html exposing (Html, br, button, div, h1, input, p, text)
-import Html.Attributes exposing (placeholder, style, type_, value)
+import Html.Attributes exposing (disabled, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -28,7 +28,7 @@ type alias FormCustomer =
     { name: String
     , address: String
     , email: String
-    , phone: Maybe Int
+    , phone: String
     }
 
 type alias CusFormModel =
@@ -47,7 +47,7 @@ type CusFormMessage
         | CAddress String
         | CEmail String
         | CPhone String
-        | AddCustomer FormCustomer
+        | AddCustomer Customer
         | GetCustomer String
         | ReturnedCus (Result Http.Error Customer)
 
@@ -72,8 +72,8 @@ update message model =
         CPhone phone ->
             ({model | cPhone = phone}, Cmd.none)
 
-        AddCustomer employee ->
-            ({model | failure = ""}, addCustomer employee)
+        AddCustomer customer ->
+            ({model | failure = ""}, addCustomer customer)
 
         GetCustomer id ->
             ({model | failure = ""}, getCustomer id)
@@ -91,9 +91,8 @@ view model =
     , viewInput "text" "Name" model.cName CName
     , viewInput "text" "Address" model.cAddress CAddress
     , viewInput "text" "Email" model.cEmail CEmail
-    , viewInput "number" "Phone number" model.cPhone CPhone
-    , button[ onClick (AddCustomer
-        (FormCustomer model.cName model.cAddress model.cEmail (String.toInt model.cPhone)))][text "Add"]
+    , viewInput "text" "Phone number" model.cPhone CPhone
+    , validateInput (FormCustomer model.cName model.cAddress model.cEmail model.cPhone)
 
     , h1 [] [text "Get customer by ID"]
     , viewInput "number" "Id" model.cId CId
@@ -107,11 +106,11 @@ viewInput : String -> String -> String -> (String -> CusFormMessage) -> Html Cus
 viewInput t p v toMsg =
   input [ type_ t, placeholder p, value v, onInput toMsg ] []
 
-addCustomer : FormCustomer -> Cmd CusFormMessage
+addCustomer : Customer -> Cmd CusFormMessage
 addCustomer customer = Http.post
     { url = "http://localhost:8080/startcode-ca3/api/customers"
     , body = Http.jsonBody
-        (customerEncoder (Customer 0 customer.name customer.address customer.email (validatePhone customer.phone)))
+        (customerEncoder customer)
     , expect = Http.expectJson ReturnedCus customerDecoder
     }
 
@@ -121,11 +120,26 @@ getCustomer id = Http.get
     , expect = Http.expectJson ReturnedCus customerDecoder
     }
 
-validatePhone : Maybe Int -> Int
-validatePhone phone =
-    case phone of
-        Just pNumber -> pNumber
-        Nothing -> 0
+validateInput : FormCustomer -> Html CusFormMessage
+validateInput cus =
+    if cus.name == "" || cus.address == "" || cus.email == "" || cus.phone == "" then
+        div []
+        [ button [disabled True] [ text "Add" ]
+        , p [style "color" "red"] [text "All fields must be filled out."]
+        ]
+    else
+        case String.toInt cus.phone of
+        Just phoneNumber ->
+            div []
+            [ button [ onClick (AddCustomer (Customer 0 cus.name cus.address cus.email phoneNumber)) ] [ text "Add" ]
+            , p [] [text ""]
+            ]
+        Nothing ->
+            div []
+            [ button [disabled True] [ text "Add" ]
+            , p [style "color" "red"] [text "Phone number must consist of numbers only."]
+            ]
+
 
 showCustomer : Customer -> Html CusFormMessage
 showCustomer customer =

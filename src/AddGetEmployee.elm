@@ -4,7 +4,7 @@ import Browser
 import Http
 import HttpError exposing (errorToString)
 import Html exposing (Html, br, button, div, h1, input, p, text)
-import Html.Attributes exposing (placeholder, style, type_, value)
+import Html.Attributes exposing (disabled, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -26,7 +26,7 @@ type alias Employee =
 type alias FormEmployee =
     { name: String
     , email: String
-    , phone: Maybe Int
+    , phone: String
     }
 
 type alias EmpFormModel =
@@ -43,7 +43,7 @@ type EmpFormMessage
         | EName String
         | EEmail String
         | EPhone String
-        | AddEmployee FormEmployee
+        | AddEmployee Employee
         | GetEmployee String
         | ReturnedEm (Result Http.Error Employee)
 
@@ -83,9 +83,8 @@ view model =
     [ h1 [] [text "Add employee"]
     , viewInput "text" "Name" model.eName EName
     , viewInput "text" "Email" model.eEmail EEmail
-    , viewInput "number" "Phone number" model.ePhone EPhone
-    , button[ onClick (AddEmployee
-        (FormEmployee model.eName model.eEmail (String.toInt model.ePhone)))][text "Add"]
+    , viewInput "text" "Phone number" model.ePhone EPhone
+    , validateInput (FormEmployee model.eName model.eEmail model.ePhone)
 
     , h1 [] [text "Get employee by ID"]
     , viewInput "number" "Id" model.eId EId
@@ -99,11 +98,11 @@ viewInput : String -> String -> String -> (String -> EmpFormMessage) -> Html Emp
 viewInput t p v toMsg =
   input [ type_ t, placeholder p, value v, onInput toMsg ] []
 
-addEmployee : FormEmployee -> Cmd EmpFormMessage
+addEmployee : Employee -> Cmd EmpFormMessage
 addEmployee employee = Http.post
     { url = "http://localhost:8080/startcode-ca3/api/employees"
     , body = Http.jsonBody
-        (employeeEncoder (Employee 0 employee.name employee.email (validatePhone employee.phone)))
+        (employeeEncoder employee)
     , expect = Http.expectJson ReturnedEm employeeDecoder
     }
 
@@ -113,11 +112,25 @@ getEmployee id = Http.get
     , expect = Http.expectJson ReturnedEm employeeDecoder
     }
 
-validatePhone : Maybe Int -> Int
-validatePhone phone =
-    case phone of
-        Just pNumber -> pNumber
-        Nothing -> 0
+validateInput : FormEmployee -> Html EmpFormMessage
+validateInput emp =
+    if emp.name == "" || emp.email == "" || emp.phone == "" then
+        div []
+        [ button [disabled True] [ text "Add" ]
+        , p [style "color" "red"] [text "All fields must be filled out."]
+        ]
+    else
+        case String.toInt emp.phone of
+            Just phoneNumber ->
+                div []
+                [ button [ onClick (AddEmployee (Employee 0 emp.name emp.email phoneNumber)) ] [ text "Add" ]
+                , p [] [text ""]
+                ]
+            Nothing ->
+                div []
+                [ button [disabled True] [ text "Add" ]
+                , p [style "color" "red"] [text "Phone number must consist of numbers only."]
+                ]
 
 showEmployee : Employee -> Html EmpFormMessage
 showEmployee employee =
